@@ -6,6 +6,15 @@ env:
   name: ubuntu
   version: 20.04
 
+# Trigger the build on certain events
+on:
+  push:
+    branches:
+      - main  # Change this to the branch you want to trigger the build on
+  pull_request:
+    branches:
+      - main  # Optional: to trigger on PRs to the main branch
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,7 +37,7 @@ jobs:
 
     # Step 4: Make monster.py executable
     - name: Make monster.py executable
-      run: chmod +x monster
+      run: chmod +x monster.py
 
     # Step 5: Run the monster.py Python script
     - name: Run monster.py
