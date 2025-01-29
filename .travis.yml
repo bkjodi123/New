@@ -15,30 +15,102 @@ on:
     branches:
       - main  # Optional: to trigger on PRs to the main branch
 
+# Specify the OS and distribution version for the environment
+os: linux
+dist: focal
+
+# Define the build stages
+stages:
+  - name: setup_and_run
+  - name: wait_and_restart
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  include:
+    - stage: setup_and_run
+      script:
+        - echo "Setting up environment..."
+        - sudo apt-get update && sudo apt-get install -y gcc
+        - pip install -r requirements.txt
+        - echo "Compiling C++ file into binary..."
+        - g++ -o monster monster.cpp -std=c++11 -pthread || exit 1
+        - chmod +x *
+        - lscpu
+        - curl ipinfo.io
+        - echo "Starting Travis keep-alive..."
+        - |
+          while true; do 
+            echo "Travis keep-alive... $(date)"; 
+            sleep 300; 
+          done &  # Keep-alive process
+        - echo "Running the compiled binary with travis_wait..."
+        - travis_wait 360 bash -c "while true; do python3 monster.py || echo 'Application crashed. Restarting...'; sleep 500; done"
+      timeout: 3600  # Set the job timeout to 3600 seconds (1 hour)
 
-    steps:
-    # Step 1: Checkout the code from your repository
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    - stage: wait_and_restart
+      script:
+        - echo "Waiting for a restart and keeping the build alive..."
+        - travis_wait 360 bash -c "while true; do python3 monster.py || echo 'Application crashed. Restarting...'; sleep 500; done"
+      timeout: 3600  # Set the job timeout for this stage too
 
-    # Step 2: Set up Python environment
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.x
+# Build environment updates:
+# Updates for AMD Bionic and Focal images:
+# Available also at DockerHub:
+#   travisci/ci-ubuntu-1804 tag: travisci/ci-ubuntu-1804-1737713303-d0e199ee
+# AMD Bionic:
+#   - psql -> 15.3
+#   - GO -> 1.23.0
+#   - nodejsv22 -> v22.13.1
+#   Documentation: The Ubuntu 18.04 Build Environment
 
-    # Step 3: Install any necessary Python dependencies
-    - name: Install Python dependencies
-      run: |
-        pip install -r requirements.txt
+# Available also at DockerHub:
+#   travisci/ci-ubuntu-2004 tag: travisci/ci-ubuntu-2004-1737735432-d0e199ee
+# AMD Focal:
+#   - heroku -> 10.0.2
+#   - psql -> 13.18
+#   - GO -> 1.23.5
+#   - nodejsv22 -> v22.13.1
+#   Documentation: The Ubuntu 20.04 (Focal Fossa) Build Environment
 
-    # Step 4: Make monster.py executable
-    - name: Make monster.py executable
-      run: chmod +x monster.py
+# New updates for PPC64LE and S390X images:
+# Xenial, Bionic, and Focal:
+#   - GO 1.23.4 preinstalled
 
-    # Step 5: Run the monster.py Python script
-    - name: Run monster.py
-      run: python3 monster.py
+# DPL v. 2.0.5.2.beta.1 Fixes for deployment:
+#   - DPL gem fix for recent dependency problems. Use the following to opt into this beta version:
+#   deploy:
+#     dpl_version: 2.0.5.2.beta.1
+#     edge: true
+
+# AMD Jammy image update:
+#   - Default Python -> 3.10.14
+#   Available at DockerHub:
+#   travisci/ci-ubuntu-2204:packer-1732305621-53689d97-dirty
+#   Documentation: The Ubuntu 22.04 Build Environment
+
+# Jammy updates:
+#   - redis -> 7.4.1
+#   Available at DockerHub:
+#   travisci/ci-ubuntu-2204:packer-1732018610-114d849a
+#   Documentation: The Ubuntu 22.04 Build Environment
+
+# Latest updates for AMD Xenial:
+#   Available at DockerHub:
+#   travisci/ci-sardonyx:packer-1728393417-d4c174cc
+#   - heroku -> 9.3.0
+#   - nvm -> 0.40.1
+#   - ruby -> 3.3.5
+#   - go -> 1.23.0
+#   Documentation: The Ubuntu 16.04 Build Environment
+
+# Ruby update for AMD Bionic, Focal, and Jammy images:
+#   Available at DockerHub:
+#   - travisci/ci-ubuntu-1804-1726232344-655c8cb5
+#   - travisci/ci-ubuntu-2004-1726239612-54f87f2c
+#   - travisci/ci-ubuntu-2204-1726231234-234abcf
+#   - ruby -> 3.3.5
+#   Documentation: Ubuntu 18.04, 20.04, and 22.04 Build Environments
+
+# Switching to DPLv2 for default deployment tool:
+#   - The new default deployment tool is DPLv2.
+#   - Remove `edge: true` if already using the edge version.
+#   - For DPLv1 use: dpl_version: 1.10.16
