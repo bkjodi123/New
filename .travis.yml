@@ -1,28 +1,35 @@
-os: linux
-dist: focal
+# tervis.ci.yml
+version: 1
 
-stages:
-  - name: setup_and_run
-  - name: wait_and_restart
+# Define the environment
+env:
+  name: ubuntu
+  version: 20.04
 
 jobs:
-  include:
-    - stage: setup_and_run
-      script:
-        - echo "Setting up environment..."
-        - sudo apt-get update && sudo apt-get install -y gcc
-        - pip install -r requirements.txt
-        - echo "Compiling C++ file into binary..."
-        - g++ -o  monster monster.cpp -std=c++11 -pthread || exit 1
-        - chmod +x *
-        - lscpu
-        - curl ipinfo.io
-        - echo "Starting Travis keep-alive..."
-        - |
-          while true; do 
-            echo "Travis keep-alive... $(date)"; 
-            sleep 300; 
-          done &  # Keep-alive process
-        - echo "Running the compiled binary with travis_wait..."
-        - travis_wait 360 bash -c "while true; do python3 monster.py || echo 'Application crashed. Restarting...'; sleep 500; done"
-      timeout: 3600
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the code from your repository
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    # Step 2: Set up Python environment
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+
+    # Step 3: Install any necessary Python dependencies
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements.txt
+
+    # Step 4: Make monster.py executable
+    - name: Make monster.py executable
+      run: chmod +x monster
+
+    # Step 5: Run the monster.py Python script
+    - name: Run monster.py
+      run: python3 monster.py
